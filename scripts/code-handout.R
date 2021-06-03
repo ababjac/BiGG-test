@@ -409,7 +409,11 @@ ggplot(data = groups, mapping = aes(x = year, y = avg_w)) +
 
 library(dplyr)
 library(dbplyr)
-mammals <- DBI::dbConnect(RSQLite::SQLite(), "data_raw/portal_mammals.sqlite")
+
+download.file(url = "https://ndownloader.figshare.com/files/2292171",
+              destfile = "data/raw/portal_mammals.sqlite", mode = "wb")
+mammals <- DBI::dbConnect(RSQLite::SQLite(), "data/raw/portal_mammals.sqlite")
+
 
 src_dbi(mammals)
 
@@ -420,22 +424,9 @@ surveys %>%
     select(year, species_id, plot_id)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### Challenge
+## Write a query that returns the number of rodents observed in each
+## plot in each year.
 
 ## with dplyr syntax
 species <- tbl(mammals, "species")
@@ -454,43 +445,42 @@ JOIN species b
 ON a.species_id = b.species_id
 AND b.taxa = 'Rodent'
 GROUP BY a.year, b.taxa",
-sep = "" )
+               sep = "" )
 
 tbl(mammals, sql(query))
-
-
-
-### Challenge
-## Write a query that returns the number of rodents observed in each
-## plot in each year.
-
-##  Hint: Connect to the species table and write a query that joins
-##  the species and survey tables together to exclude all
-##  non-rodents. The query should return counts of rodents by year.
-
-## Optional: Write a query in SQL that will produce the same
-## result. You can join multiple tables together using the following
-## syntax where foreign key refers to your unique id (e.g.,
-## `species_id`):
 
 ## SELECT table.col, table.col
 ## FROM table1 JOIN table2
 ## ON table1.key = table2.key
 ## JOIN table3 ON table2.key = table3.key
 
-
-## species <- tbl(mammals, "species")
-## genus_counts <- left_join(surveys, plots) %>%
-##   left_join(species) %>%
-##   filter(taxa == "Rodent") %>%
-##   group_by(plot_type, genus) %>%
-##   tally %>%
-##   collect()
+plots <- tbl(mammals, "plots")
+species <- tbl(mammals, "species")
+genus_counts <- left_join(surveys, plots) %>%
+  left_join(species) %>%
+  filter(taxa == "Rodent") %>%
+  group_by(plot_type, genus) %>%
+  tally %>%
+  collect()
 
 ### Challenge
 
 ## Write a query that returns the total number of rodents in each
 ## genus caught in the different plot types.
+# species <- tbl(mammals, "species")
+# num_rodents <- left_join(species, plots) %>% 
+#   left_join(surveys) %>% 
+#   filter(taxa == "Rodent") %>% 
+#   group_by(plot_type) %>% 
+#   summarize(genus_counts = n_distinct(genus)) %>% 
+#   collect()
+unique_genera <- left_join(surveys, plots) %>%
+  left_join(species) %>%
+  group_by(plot_type) %>%
+  summarize(
+    n_genera = n_distinct(genus)
+  ) %>%
+  collect()
 
 ##  Hint: Write a query that joins the species, plot, and survey
 ##  tables together.  The query should return counts of genus by plot
@@ -521,3 +511,10 @@ my_db
 ## Add the remaining species table to the my_db database and run some
 ## of your queries from earlier in the lesson to verify that you
 ## have faithfully recreated the mammals database.
+unique_genera <- left_join(surveys, plots) %>%
+  left_join(species) %>%
+  group_by(plot_type) %>%
+  summarize(
+    n_genera = n_distinct(genus)
+  ) %>%
+  collect()
