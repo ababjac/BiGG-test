@@ -1,6 +1,7 @@
 # temporarily load RSQLite so that the version shows in sessionInfo()
 library(RSQLite)
 library(tidyverse)
+library(hexbin)
 detach(package:RSQLite, unload=TRUE)
 
 ######################### INTRO TO R ##############################
@@ -192,8 +193,6 @@ animal_data <- data.frame(
       weight = c(45, 8, 1.1, 0.8)
       )
 
-
-
 ## ## Challenge:
 
 country_climate <- data.frame(country = c("Canada", "Panama", "South Africa", "Australia"),
@@ -216,19 +215,15 @@ country_climate <- data.frame(country = c("Canada", "Panama", "South Africa", "A
                               has_kangaroo = c(FALSE, FALSE, FALSE, TRUE))
 
 
+
+######################### MANIPULATING DATA IN R #########################
+
 ## ## Pipes Challenge:
 ## ##  Using pipes, subset the data to include animals collected
 ## ##  before 1995, and retain the columns `year`, `sex`, and `weight.`
-
-
-
-
-
-
-
-
-
-
+pipes <- surveys %>% 
+  filter(year < 1995) %>% 
+  select(year, sex, weight)
 
 ## ## Mutate Challenge:
 ## ##  Create a new data frame from the `surveys` data that meets the following
@@ -238,115 +233,85 @@ country_climate <- data.frame(country = c("Canada", "Panama", "South Africa", "A
 ## ##  than 3.
 ## 
 ## ##  Hint: think about how the commands should be ordered to produce this data frame!
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+mutate <- surveys %>%
+  filter(!is.na(hindfoot_length)) %>%
+  mutate(hindfoot_cm = hindfoot_length / 10) %>%
+  filter(hindfoot_cm < 3) %>%
+  select(species_id, hindfoot_cm)
 
 ## ## Count Challenges:
 ## ##  1. How many animals were caught in each `plot_type` surveyed?
 ## 
+surveys %>% 
+  count(plot_type)
 ## ##  2. Use `group_by()` and `summarize()` to find the mean, min, and max
 ## ## hindfoot length for each species (using `species_id`). Also add the number of
 ## ## observations (hint: see `?n`).
 ## 
+surveys %>% 
+  group_by(species_id) %>% 
+  summarize(mean_hl = mean(hindfoot_length),
+            min_hl = min(hindfoot_length),
+            maz_hl = max(hindfoot_length),
+            n = n()
+            )
+
 ## ##  3. What was the heaviest animal measured in each year? Return the
 ## ##  columns `year`, `genus`, `species_id`, and `weight`.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+surveys %>% 
+  group_by(year) %>% 
+  filter(weight == max(weight)) %>% 
+  select(year, genus, species_id, weight)
 
 ## ## Reshaping challenges
 ## 
 ## ## 1. Spread the `surveys` data frame with `year` as columns, `plot_id` as rows, and the number of genera per plot as the values. You will need to summarize before reshaping, and use the function `n_distinct()` to get the number of unique genera within a particular chunk of data. It's a powerful function! See `?n_distinct` for more.
 ## 
+s_surveys <- surveys %>%
+  group_by(plot_id, year) %>%
+  summarize(n_genera = n_distinct(genus)) %>%
+  spread(year, n_genera)
 ## ## 2. Now take that data frame and `gather()` it again, so each row is a unique `plot_id` by `year` combination.
 ## 
+g_surveys <- spread_surveys %>% 
+  gather("year", "n_genera", -plot_id)
 ## ## 3. The `surveys` data set has two measurement columns: `hindfoot_length` and `weight`. This makes it difficult to do things like look at the relationship between mean values of each measurement per year in different plot types. Let's walk through a common solution for this type of problem. First, use `gather()` to create a dataset where we have a key column called `measurement` and a `value` column that takes on the value of either `hindfoot_length` or `weight`. *Hint*: You'll need to specify which columns are being gathered.
-## 
+##
+gathered_surveys <- surveys %>%
+  gather("measurement", "value", hindfoot_length, weight)
 ## ## 4. With this new data set, calculate the average of each `measurement` in each `year` for each different `plot_type`. Then `spread()` them into a data set with a column for `hindfoot_length` and `weight`. *Hint*: You only need to specify the key and value columns for `spread()`.
+spread_surveys <- gathered_surveys %>% 
+  group_by(year, measurement, plot_type) %>% 
+  summarize(measurement_mean = mean(measurement)) %>% 
+  spread(measurement, measurement_mean)
 
 
 
-
+######################## VISUALIZING DATA IN R #############################
 
 ## ### Create the dataset for exporting:
 ## ##  Start by removing observations for which the `species_id`, `weight`,
 ## ##  `hindfoot_length`, or `sex` data are missing:
-## surveys_complete <- surveys %>%
-##     filter(species_id != "",        # remove missing species_id
-##            !is.na(weight),                 # remove missing weight
-##            !is.na(hindfoot_length),        # remove missing hindfoot_length
-##            sex != "")                      # remove missing sex
+surveys_complete <- surveys %>%
+    filter(species_id != "",        # remove missing species_id
+           !is.na(weight),                 # remove missing weight
+           !is.na(hindfoot_length),        # remove missing hindfoot_length
+           sex != "")                      # remove missing sex
 ## 
 ## ##  Now remove rare species in two steps. First, make a list of species which
 ## ##  appear at least 50 times in our dataset:
-## species_counts <- surveys_complete %>%
-##     count(species_id) %>%
-##     filter(n >= 50) %>%
-##     select(species_id)
+species_counts <- surveys_complete %>%
+    count(species_id) %>%
+    filter(n >= 50) %>%
+    select(species_id)
 ## 
 ## ##  Second, keep only those species:
-## surveys_complete <- surveys_complete %>%
-##     filter(species_id %in% species_counts$species_id)
+surveys_complete <- surveys_complete %>%
+    filter(species_id %in% species_counts$species_id)
+
+
+
 ### Data Visualization with ggplot2
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ## install.packages("hexbin")
 ## library(hexbin)
@@ -362,22 +327,17 @@ country_climate <- data.frame(country = c("Canada", "Panama", "South Africa", "A
 ## install.packages("hexbin")
 ## library(hexbin)
 ## 
+
+surveys_plot <- ggplot(data = surveys_complete, 
+                       mapping = aes(x = weight, y = hindfoot_length))
 ## ## Then use the `geom_hex()` function:
 ## 
-## surveys_plot +
-##     geom_hex()
+surveys_plot +
+    geom_hex()
 ## 
 ## ## What are the relative strengths and weaknesses of a hexagonal bin
 ## ## plot compared to a scatter plot?
-
-
-
-
-
-
-
-
-
+print("Can be harder to interpret but shows more information")
 
 
 ## ### Challenge with scatter plot:
@@ -385,56 +345,37 @@ country_climate <- data.frame(country = c("Canada", "Panama", "South Africa", "A
 ## ##  Use what you just learned to create a scatter plot of `weight`
 ## ## over `species_id` with the plot types showing in different colors.
 ## ## Is this a good way to show this type of data?
-
-
-
+ggplot(data = surveys_complete, mapping = aes(x = species_id, y = weight)) +
+  geom_point(alpha = 0.5, aes(color = plot_type))
 
 
 ## ## Challenge with boxplots:
 ## ##  Start with the boxplot we created:
-## ggplot(data = surveys_complete, mapping = aes(x = species_id, y = weight)) +
-##   geom_boxplot(alpha = 0) +
-##   geom_jitter(alpha = 0.3, color = "tomato")
+ggplot(data = surveys_complete, mapping = aes(x = species_id, y = weight)) +
+  geom_boxplot(alpha = 0) +
+  geom_jitter(alpha = 0.3, color = "tomato")
 ## 
 ## ##  1. Replace the box plot with a violin plot; see `geom_violin()`.
 ## 
+ggplot(data = surveys_complete, mapping = aes(x = species_id, y = weight)) +
+  geom_boxplot(alpha = 0) +
+  geom_violin(alpha = 0.5)
 ## ##  2. Represent weight on the log10 scale; see `scale_y_log10()`.
 ## 
+ggplot(data = surveys_complete, mapping = aes(x = species_id, y = weight)) +
+  scale_y_log10("weight") +
+  geom_boxplot(alpha = 0) +
+  geom_violin(alpha = 0.5)
 ## ##  3. Create boxplot for `hindfoot_length` overlaid on a jitter layer.
-## 
+ggplot(data = surveys_complete, mapping = aes(x = species_id, y = hindfoot_length)) +
+  geom_jitter(alpha = 0.1, aes(color = plot_id)) +
+  geom_boxplot(alpha = 0)
 ## ##  4. Add color to the data points on your boxplot according to the
 ## ##  plot from which the sample was taken (`plot_id`).
 ## ##  *Hint:* Check the class for `plot_id`. Consider changing the class
 ## ##  of `plot_id` from integer to factor. Why does this change how R
 ## ##  makes the graph?
-## 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## SEE Q3
 
 
 ## ### Plotting time series challenge:
@@ -442,20 +383,15 @@ country_climate <- data.frame(country = c("Canada", "Panama", "South Africa", "A
 ## ##  Use what you just learned to create a plot that depicts how the
 ## ##  average weight of each species changes through the years.
 ## 
+groups <- surveys_complete %>% 
+  group_by(year, species_id) %>% 
+  summarize(avg_w = mean(weight))
 
-
-
-
-
-
-
-
+ggplot(data = groups, mapping = aes(x = year, y = avg_w)) +
+  geom_line() +
+  facet_wrap(vars(species_id))
 
 ## install.packages("patchwork")
-
-
-
-
 
 ## ### Final plotting challenge:
 ## ##  With all of this information in hand, please take another five
@@ -468,6 +404,8 @@ country_climate <- data.frame(country = c("Canada", "Panama", "South Africa", "A
 ## install.packages(c("dbplyr", "RSQLite"))
 
 
+
+#################### R AND SQL #########################
 
 library(dplyr)
 library(dbplyr)
