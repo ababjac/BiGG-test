@@ -1,7 +1,7 @@
 ---
 title: "Reusability"
 author: "ababjac"
-date: "6/4/2021"
+date: "6/3/2021"
 output: html_document
 ---
 
@@ -9,12 +9,142 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r cars}
+------------------------------------ Notes -------------------------------------
+
+Definition: Reusability is the ability for your code to be run again (either by you or others) and have it produce the same results. 
+
+There are many reasons why we want our code to be reusable, but usually in statistics the main reason is so that we (or others) can replicate our analysis at a later date. The most important things for achieving reusable code are:
+
+-- Modularity
+-- Functions
+-- Preventing duplicative code/hard-coding
+
+These topics can end up being rather synonymous with each other, so we will discuss them together. But first, some definitions:
+
+What is `modularity`?
+
+Modularity is basically separating a program's functions into independent pieces or "building blocks" which then combine together to form
+a complete script (program). These building blocks (if created generically) can be reused for multiple purposes. Many of the built-in functions you see in R (for example the `mean()` function or the `print()` function) are created with modularity in mind.
+
+
+What is `duplicative code`?
+
+Duplicative code is as simple as it sounds. This is basically when we repeat a line of code (or several lines of code) in a redundant manner. This can often be simplified with loop structures or functions.
+
+#EXAMPLE#
+Calculate the first ten digits of the Fibonacci sequence
+```{r duplicate}
+#duplicative
+fib <- rep(0, 10)
+fib[1] <- 1
+fib[2] <- 1
+fib[3] <- fib[1] + fib[2]
+fib[4] <- fib[2] + fib[3]
+fib[5] <- fib[3] + fib[4]
+fib[6] <- fib[4] + fib[5]
+fib[7] <- fib[5] + fib[6]
+fib[8] <- fib[6] + fib[7]
+fib[9] <- fib[7] + fib[8]
+fib[10] <- fib[8] + fib[9]
+fib
+
+#simplified
+fib <- rep(0, 10)
+fib[1] <- 1
+fib[2] <- 1
+for(i in 1:8){
+  fib[i+2] <- fib[i] + fib[i+1]
+}
+fib
 
 ```
 
 
-```{r pressure}
+
+What is `hard-coding`?
+
+Hard-coding is when we set a component of our program to a static value (number or string for example) in a way that makes it difficult to change later. Using the previous example with Fibonacci numbers, we hard-coded the amount of fibonacci numbers that we wanted to compute (10). Setting this to a variable makes it more flexible to change.
+
+#EXAMPLE#
+```{r hard-coding}
+num_to_compute <- 10 # We can now compute as many Fibonacci numbers as we would like
+
+fib <- rep(0, num_to_compute)
+fib[1] <- 1
+fib[2] <- 1
+for(i in 1:(num_to_compute-2)){
+  fib[i+2] <- fib[i] + fib[i+1]
+}
+fib
+```
+
+
+
+How can we use `functions` to improve our code?
+
+Functions allow us to break up our code into "chunks". These chunks are generally much more reusable and easier to understand than trying to code up the entire script linearly. Let's walk through function syntax in R.
+
+#EXAMPLE#
+```{r functions}
+#basic syntax
+function_name <- function(arguments=None) { #you can specify optional arguments by using the "=".
+  print("do something cool in here")
+}
+
+#In R you may or may not want to "return" something from your function (meaning pass back a value)
+#If you want to return, use the return() keyword inside your function
+my_return_func <- function() { #you do not necessarily need arguments!
+  return(TRUE)
+}
+
+#lets test out our functions
+function_name()
+my_return_func()
+  
+```
+
+#EXERCISE#
+Write a function called `my_distance` that takes three arguments:
+
+* `city1` - a numerical vector with two elements representing the x and y coordinates of the first location
+
+* `city2` - a numerical vector with two elements representing the x and y coordinates of the second location
+
+* `type` - either "ruler" (default), "absolute", or "manhattan"
+
+If the coordinates of the first city are (x1,y1) and the coordinates of the second city are (x2,y2), then the different types of distances are:
+
+* "ruler" distance is  `sqrt( (x1-x2)^2 + (y1-y2)^2 )`
+
+* "absolute" distance is `abs(x1-x2) + abs(y1-y2)`
+
+* "manhattan" distance is `0.5*abs(x1-x2) + abs(y1-y2)` 
+
+For example, if the first city's location was represented by the vector `c(10,3)` and the second by the vector `c(5,6)` then the ruler distance would be `sqrt( (10-5)^2 + (3-6)^2 )`, the absolute distance would be `abs(10-5) + abs(3-6)` and the manhattan distance would be `0.5*abs(10-5)+abs(3-6)`.
+
+The function should return the requested distance between the two cities. Show what your function gives with  `city1 <- c(1,2); city2 <- c(4,-2); my_distance(city1,city2)` with all three distance measures.
+
+```{r challenge-functions}
+
+#WRITE YOUR CODE HERE
+
+
+
+#test cases
+city1 <- c(1,2); city2 <- c(4,-2)
+
+my_distance(city1, city2)
+# 5
+
+my_distance(city1, city2, "absolute")
+# 7
+
+my_distance(city1, city2, "manhattan")
+# 5.5 
+
+my_distance(city1,city2, "jaccard") #not a valid distance metric for our function...
+#NaN
+
 
 ```
 

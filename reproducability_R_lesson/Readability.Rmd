@@ -1,7 +1,7 @@
 ---
 title: "Readability"
 author: "ababjac"
-date: "6/4/2021"
+date: "6/3/2021"
 output: html_document
 ---
 
@@ -9,16 +9,276 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+------------------------------------ Notes -------------------------------------
+
+Definition: Readability is generally used to describe how easy it is to understand someone else's code. 
+
+We want our code to be readable in order to better explain it to others or be able to refer back to it in the future. Usually readability can be accomplished through a few best practices:
+
+-- Commenting
+-- Good Naming Conventions
+-- Code Style
+-- Program Structure
+
+We will go over each of these in more detail below.
 
 
+----------------------------- Part 1: Commenting -------------------------------
+
+Comments are basically special lines of "code" that are not run when the program executes. Usually they are used to help describe what a 
+part of the program is doing. In R, comments are created with the "#" sign. See an example below:
+
+#EXAMPLE#
+```{r commenting}
+#print("This won't run) #commented line
+print("This will run") #uncommented line
+
+#everything after the '#' sign does not run!
+```
+
+There are generally three forms of comments:
+1. Documentation comments - Generally used to give an overview of a file/script (i.e. what it does and how to run it).
+2. Function comments - These describe the purpose of a function, which parameters it accepts, and what output it generates.
+3. Logic comments - Usually inline comments used to help make sense of a more complicated chunk of code.
+
+A good rule of thumb is to have a documentation comment at the top of your scripts, always comments your functions, and use inline comments to explain potentially complicated code blocks.
+
+#EXERCISE#
+Comment the chunk of code below based on what we discussed.
+```{r comment-matrix}
+#DO NOT CHANGE THE CODE -- JUST ADD COMMENTS
 
 
-```{r cars}
+matrix.smoother <- function(MATRIX, halfwindow){
+  M.smoothed <- MATRIX
+  
+  for(row in (halfwindow+1):(nrow(MATRIX)-halfwindow)){
+    for(col in (halfwindow+1):(ncol(MATRIX)-halfwindow)){
+      M.smoothed[row, col] <- mean( MATRIX[(row-halfwindow):(row+halfwindow),(col-halfwindow):(col+halfwindow)] ) 
+    }
+  }
+  
+  return(M.smoothed)
+}
 
+MB <- matrix( 0,ncol=75,nrow=75)
+set.seed(474)
+for( i in 1:75) { 
+  for (j in 1:75) { 
+    MB[i,j] <- round(2.25+runif(1,-.5,.5) + log10(20/( (i-25.5)^2 + (j-26.5)^2 ) + 20/( (i-27.5)^2 + (j-29.5)^2 ) + 25/( (i-61.5)^2 + (j-9.5)^2) + 3/( (i-57.5)^2 + (j-64.5)^2 ) ), digits=2) #dont worry about commenting this line
+  } 
+}
+
+rownames(MB) <- colnames(MB) <- 1:75
+image(MB,col = rainbow(100))
+
+
+M.1 <- matrix.smoother(MB,halfwindow=1)
+image(M.1,col = rainbow(100))
+mean(M.1)
+
+M.3 <- matrix.smoother(MB,halfwindow=3)
+image(M.3,col = rainbow(100))
+mean(M.3)
+
+M.6 <- matrix.smoother(MB,halfwindow=6)
+image(M.6,col = rainbow(100))
+mean(M.6)
 ```
 
 
-```{r pressure}
 
+------------------------- Part 2: Naming Conventions ---------------------------
+
+Part of being able to understand your code is to have consistent and clear naming conventions. This applies to functions,
+variable names, etc. In general, the goal is to keep your object names concise and descriptive. 
+
+First let's look at an example of why bad names can be confusing...
+
+#BAD EXAMPLE#
+```{r naming-bad}
+my_func <- function(a, b){
+  return(b/a)
+}
+
+c <- cars
+colnames(c) <- c("s", "d")
+
+my_ret <- my_func(c$s, c$d)
+print(mean(my_ret)) #can anyone tell me what this is?
 ```
+
+
+Some general best practices for naming are:
+-- Give functions "verb" names that describe what they are doing
+-- Give objects "noun" names that relate to what is in them
+-- Strike a balance between descriptiveness and length 
+
+
+#GOOD EXAMPLE#
+```{r naming-good}
+calculate_times <- function(speed_array, distance_array){
+  return(distance_array/speed_array) # time = distance / speed 
+}
+
+cars_dataset <- cars
+colnames(cars_dataset) <- c("speed", "distance")
+
+times_array <- calculate_times(cars_dataset$speed, cars_dataset$distance)
+print(mean(times_array)) #we should all know what this is now :)
+```
+
+
+
+------------------------------ Part 3: Code Style ------------------------------
+
+Code style is the way we format our code. For example things like:
+-- indentation
+-- object/function name case (camel-case, snake-case, etc.)
+-- file organization
+
+In order to make code look more uniform, programmers have come up with "style guides" to help make sure code is more readable.
+The R style guide is based on the tidyverse can be found here: https://style.tidyverse.org/index.html
+
+You do not have to follow these rules, but it can definitely help make your code easier to read!
+
+#EXERCISE#
+Re-style the code below to make it follow tidyverse guidelines (you can create a new R chunk if you would like).
+```{r style}
+my_temps <- pressure$temperature; length(my_temps) -> LEnGth; convertToCelcius <- function(tmpsARRAY, l){ return(((tmpsARRAY - 32) * (5/9))) }; (mean(convertToCelcius(my_temps, LEnGth)))
+```
+
+
+
+-------------------------- Part 4: Program Structure ---------------------------
+
+Finally, we generally want to keep our code organized through the use of:
+1. Conditionals
+2. Loops
+3. Functions (we will go over these when we talk about reusability)
+
+
+#EXAMPLES#
+```{r conditionals}
+condition1 <-TRUE; condition2 <- TRUE #ignore
+
+#Generally of the form:
+if(condition1){
+  print("do something")
+}else if(condition2){
+  print("do something else")
+}else{
+  print("do a third thing")
+}
+
+#We usually use boolean operators to test conditions: ==, <, >, !=, etc. Some example conditions are below:
+condition1 <- cars$speed[4] < 10; condition2 <- cars$dist[3] > 50
+
+if(condition1) {
+  print("That car is slow")
+}else if(condition2) {
+  print("That is a large distance")
+}else {
+  print("Its just a car")
+}
+
+#We can also build logical vectors using conditionals
+logical_vector <- cars$speed > 15
+print(logical_vector) #what data type is this?
+
+#Logical vectors can be useful for many things including creating subsets...
+subset <- cars$dist[logical_vector]
+print(subset)
+```
+
+```{r loops}
+#There are 2 main types of loops: while and for.
+
+#WHILE LOOPS: loop while condition is true, will break the loop when condition becomes false
+condition <- TRUE
+
+while(condition) { #how many times did this loop execute?
+  condition <- FALSE
+}
+
+#We can also use keywords to control loops
+# break - exits the loop completely
+# continue - skips the rest of the current iteration of the loop and continues the next cycle
+
+while(condition) {
+  break
+}
+
+#FOR LOOPS: loop through a designated set or range of values
+
+#a simple example
+length <- 5
+for(i in 1:length) {
+  print(i)
+}
+
+#We can use this to iterate through data structures
+
+#example 1
+for(j in 1:length(cars)) {
+  print(cars$speed[j])
+}
+
+#example 2
+for(elem in cars$speed) {
+  print(elem)
+}
+
+#example 3 -- nesting loops
+simple_matrix <- matrix(1:9, nrow=3)
+
+for(i in 1:nrow(simple_matrix)) {
+  for(j in 1:ncol(simple_matrix)) {
+    print(simple_matrix[i, j])
+  }
+}
+```
+
+
+
+
+#EXERCISE#
+A slightly more complicated real life application:
+
+Let the time series (quarterly sales) `x` have first element 15.3, second element 9.5, and third element 5.4. 
+
+The time series `x` evolves via the equation:
+
+`x[t] = Seasonality + 0.3*t + 0.9*x[t-1] - 0.3*x[t-2] - 0.1*x[t-3] + 7.1`
+
+The current value of `x` depends on the three previous values, the passage of time, and a "seasonality" component.  `Seasonality` in the above equation is actually one of four numbers, depending on the value of `t`.    
+
+*  At t=1 (Q1), let `Seasonality` equal   8.2  
+*  At t=2 (Q2), let `Seasonality` equal   3.3  
+*  At t=3 (Q3), let `Seasonality` equal -9.6
+*  At t=4 (Q4), let `Seasonality` equal  -1.9
+*  At t=5 (Q1 again), let `Seasonality` equal 8.2
+*  At t=6 (Q2 again), let `Seasonality` equal 3.3
+*  etc.
+
+For this series, we see that the 1st/2nd quarters are typically above average while the 3rd/4th quarters are below average. 
+
+Starting with the 4th element, evolve this series so that `x` has a total of 100 elements.   The `head` of `x` is given as a sanity check.  Note: I have defined the elements of a vector called `quarter` (defined in the chunk below) to be "Q1", "Q2", "Q3", "Q4", "Q1", "Q2", "Q3", "Q4", etc.  Although it is not required to use this vector in your solution, you may find `quarter` helpful when using `if` statements. 
+
+Hint: Inside the curly brackets of the `for` loop, first calculate the "nonseasonal" component of the forecast `0.3*t + 0.9*x[t-1] - 0.3*x[t-2] - 0.1*x[t-3] + 7.1`.  Then, use a series of `if`s (or nested `if`s) and based on what quarter `t` corresponds to, left-arrow into `x[t]` the nonseason component you just completed plus the seasonal contribution (either 8.3, 3.3, -9.6, or -1.9).
+
+Hint: The "%%" is the modulo operator in R.
+
+Print to the screen the results of running `mean(x)`.
+
+```{r challenge-timeseries}
+quarter <- rep( paste("Q",1:4,sep=""), 25 )[1:100]  #100 because we want a vector with 50 elements
+
+#WRITE YOUR CODE HERE
+
+
+#head(x) #uncomment to check your work
+#15.3000  9.5000  5.4000  6.8800 20.4220 27.9758
+```
+
 
